@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 st.set_page_config(
-    page_title="RedTeamer — LLM Security Evaluation",
+    page_title="RedTeamer",
     page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
