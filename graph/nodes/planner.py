@@ -1,4 +1,4 @@
-from langchain_groq import ChatGroq
+from graph.nodes.get_llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import RedTeamState
 import json
@@ -8,11 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def planner_node(state: RedTeamState) -> dict:
-    llm = ChatGroq(
-        model=state["model"],
-        api_key=state.get("api_key") or os.getenv("GROQ_API_KEY")
-    )
-
+    llm = get_llm(state)
     system_prompt = state["system_prompt"]
 
     prompt = f"""
@@ -48,7 +44,6 @@ Return ONLY a valid JSON array, no explanation, no markdown, just raw JSON like 
     ])
 
     raw = response.content.strip()
-
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -57,7 +52,7 @@ Return ONLY a valid JSON array, no explanation, no markdown, just raw JSON like 
 
     attack_prompts = json.loads(raw)
 
-    print(f"✅ Planner generated {len(attack_prompts)} attack prompts")
+    print(f"Planner generated {len(attack_prompts)} attack prompts")
     for ap in attack_prompts:
         print(f"  [{ap['category']}] {ap['prompt'][:60]}...")
 

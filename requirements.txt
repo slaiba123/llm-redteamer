@@ -1,6 +1,8 @@
 langgraph
 langchain
 langchain-groq
+langchain-openai
+langchain-google-genai
 streamlit
 python-dotenv
 langsmith
