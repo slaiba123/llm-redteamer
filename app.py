@@ -3,7 +3,7 @@ from graph.graph import build_graph
 from graph.state import RedTeamState
 import os
 from dotenv import load_dotenv
-
+from utils.pdf_generator import generate_pdf
 load_dotenv()
 
 st.set_page_config(
@@ -412,7 +412,7 @@ else:
                 system_prompt=system_prompt,
                 model=model,
                 provider=provider,
-                api_key=custom_api_key.strip() or os.getenv("GROQ_API_KEY"),
+                api_key=custom_api_key.strip() if custom_api_key.strip() else (os.getenv("GROQ_API_KEY") or ""),
                 attack_prompts=[],
                 attack_results=[],
                 judged_results=[],
@@ -569,13 +569,26 @@ else:
 
             # ── DOWNLOAD ──────────────────────────────────────────────────
             st.markdown("<br>", unsafe_allow_html=True)
-            st.download_button(
-                label="DOWNLOAD FULL REPORT (.md)",
-                data=final_state["report"],
-                file_name="redteam_report.md",
-                mime="text/markdown"
-            )
-
+            col_md, col_pdf = st.columns(2)
+            with col_md:
+                st.download_button(
+                    label="DOWNLOAD FULL REPORT (.md)",
+                    data=final_state["report"],
+                    file_name="redteam_report.md",
+                    mime="text/markdown"
+                )
+            with col_pdf:
+                pdf_bytes = generate_pdf(
+                    judged_results=judged,
+                    system_prompt=system_prompt,
+                    report_text=final_state["report"]
+                )
+                st.download_button(
+                    label="DOWNLOAD REPORT (.pdf)",
+                    data=pdf_bytes,
+                    file_name="redteam_report.pdf",
+                    mime="application/pdf"
+                )
         except Exception as e:
             st.error(f"Evaluation failed: {e}")
             st.exception(e)
