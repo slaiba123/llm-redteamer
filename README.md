@@ -468,22 +468,6 @@ A key observation during experimentation was that retrieval-grounded systems gen
 
 ---
 
-# Future Improvements
-
-Planned enhancements include:
-
-- Automated benchmark datasets
-- OWASP LLM Top 10 mapping
-- Persistent evaluation storage
-- Multi-turn adversarial conversations
-- RAG-specific attack simulation
-- Hallucination scoring
-- Token-level analysis
-- Evaluation dashboards
-- CI/CD integration for automated red-teaming
-
----
-
 # Limitations
 
 Current limitations include:
@@ -528,30 +512,6 @@ rather than a full end-to-end RAG security assessment platform.
 
 Future work may extend the framework with retrieval-aware attack simulation, context-level evaluation, and document-grounded adversarial testing.
 
----
-
-# Academic Relevance
-
-This project can support:
-
-- AI Safety coursework
-- Final Year Projects (FYP)
-- Security engineering demonstrations
-- LLM evaluation research
-- Prompt engineering studies
-- Human-AI alignment experimentation
-
----
-
-# Acknowledgements
-
-Built using:
-
-- LangGraph
-- LangChain
-- Streamlit
-- LangSmith
-- OpenAI-compatible APIs
 
 ---
 
