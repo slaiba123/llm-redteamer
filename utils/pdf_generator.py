@@ -10,12 +10,22 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 
 RED = colors.HexColor("#ff3333")
-DARK_BG = colors.HexColor("#0f0f0f")
+DARK_BG = colors.HexColor("#0a0a0a")
 MID_GRAY = colors.HexColor("#333333")
 LIGHT_GRAY = colors.HexColor("#aaaaaa")
 GREEN = colors.HexColor("#33cc66")
 YELLOW = colors.HexColor("#ffaa33")
 WHITE = colors.white
+
+PAGE_W, PAGE_H = letter
+
+
+def dark_page(canvas, doc):
+    """Draw dark background first so content renders on top."""
+    canvas.saveState()
+    canvas.setFillColor(DARK_BG)
+    canvas.rect(0, 0, PAGE_W, PAGE_H, fill=1, stroke=0)
+    canvas.restoreState()
 
 
 def generate_pdf(judged_results, system_prompt, report_text):
@@ -23,18 +33,19 @@ def generate_pdf(judged_results, system_prompt, report_text):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
+        leftMargin=0.65 * inch,
+        rightMargin=0.65 * inch,
         topMargin=0.75 * inch,
         bottomMargin=0.75 * inch,
     )
 
-    styles = getSampleStyleSheet()
+    # usable width = 8.5 - 0.65 - 0.65 = 7.2 inches
+    USABLE_W = PAGE_W - 0.65 * inch - 0.65 * inch
 
     title_style = ParagraphStyle("Title", fontName="Helvetica-Bold", fontSize=20,
-                                  textColor=WHITE, spaceAfter=4, alignment=TA_LEFT)
+                                  textColor=WHITE, spaceAfter=10, alignment=TA_LEFT)
     subtitle_style = ParagraphStyle("Subtitle", fontName="Helvetica", fontSize=10,
-                                     textColor=LIGHT_GRAY, spaceAfter=20)
+                                     textColor=LIGHT_GRAY, spaceBefore=6, spaceAfter=20)
     section_style = ParagraphStyle("Section", fontName="Helvetica-Bold", fontSize=9,
                                     textColor=LIGHT_GRAY, spaceBefore=20, spaceAfter=8)
     body_style = ParagraphStyle("Body", fontName="Helvetica", fontSize=10,
@@ -43,16 +54,18 @@ def generate_pdf(judged_results, system_prompt, report_text):
                                    textColor=LIGHT_GRAY, spaceAfter=4, leading=14)
     fail_style = ParagraphStyle("Fail", fontName="Helvetica-Bold", fontSize=9,
                                  textColor=RED, spaceAfter=4)
+
+    # Table cell styles
     cell_style = ParagraphStyle("Cell", fontName="Helvetica", fontSize=8,
-                                 textColor=LIGHT_GRAY, leading=11)
+                                 textColor=LIGHT_GRAY, leading=12)
     cell_red = ParagraphStyle("CellRed", fontName="Helvetica-Bold", fontSize=8,
-                               textColor=RED, leading=11)
+                               textColor=RED, leading=12)
     cell_green = ParagraphStyle("CellGreen", fontName="Helvetica-Bold", fontSize=8,
-                                 textColor=GREEN, leading=11)
+                                 textColor=GREEN, leading=12)
     cell_yellow = ParagraphStyle("CellYellow", fontName="Helvetica-Bold", fontSize=8,
-                                  textColor=YELLOW, leading=11)
+                                  textColor=YELLOW, leading=12)
     header_style = ParagraphStyle("Header", fontName="Helvetica-Bold", fontSize=8,
-                                   textColor=LIGHT_GRAY, leading=11)
+                                   textColor=LIGHT_GRAY, leading=12)
 
     story = []
 
@@ -71,7 +84,8 @@ def generate_pdf(judged_results, system_prompt, report_text):
         ["TOTAL ATTACKS", "AVG SCORE", "FAILED ATTACKS", "SAFETY RATING"],
         [str(total), f"{avg:.1f}/10", str(failures), rating],
     ]
-    metrics_table = Table(metrics_data, colWidths=[1.5 * inch] * 4)
+    col_w = USABLE_W / 4
+    metrics_table = Table(metrics_data, colWidths=[col_w] * 4)
     metrics_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), MID_GRAY),
         ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#1a1a1a")),
@@ -106,17 +120,18 @@ def generate_pdf(judged_results, system_prompt, report_text):
         status = "PASS" if r["score"] >= 5 else "FAIL"
         s_style = cell_green if r["score"] >= 5 else cell_red
         score_style = cell_green if r["score"] >= 8 else cell_yellow if r["score"] >= 5 else cell_red
-        prompt_short = r["prompt"][:70] + "..." if len(r["prompt"]) > 70 else r["prompt"]
-        reason_short = r["reason"][:120] + "..." if len(r["reason"]) > 120 else r["reason"]
         table_data.append([
             Paragraph(status, s_style),
             Paragraph(r["category"], cell_style),
-            Paragraph(prompt_short, cell_style),
+            Paragraph(r["prompt"], cell_style),
             Paragraph(f"{r['score']}/10", score_style),
-            Paragraph(reason_short, cell_style),
+            Paragraph(r["reason"], cell_style),
         ])
 
-    col_widths = [0.55*inch, 0.95*inch, 1.9*inch, 0.55*inch, 2.8*inch]
+    # Columns sum to USABLE_W = 7.2 inch
+    # STATUS  CATEGORY  PROMPT  SCORE  REASON
+    # 0.55    1.05      1.85    0.5    3.25
+    col_widths = [0.55*inch, 1.05*inch, 1.85*inch, 0.5*inch, 3.25*inch]
     results_table = Table(table_data, colWidths=col_widths, repeatRows=1)
 
     row_styles = [
@@ -152,7 +167,7 @@ def generate_pdf(judged_results, system_prompt, report_text):
             story.append(Paragraph(r["prompt"], prompt_style))
             story.append(Paragraph("<b>Bot Response:</b>", body_style))
             story.append(Paragraph(
-                r["response"][:500] + ("..." if len(r["response"]) > 500 else ""),
+                r["response"][:600] + ("..." if len(r["response"]) > 600 else ""),
                 prompt_style
             ))
             story.append(Paragraph(f"<b>Reason:</b> {r['reason']}", body_style))
@@ -171,11 +186,5 @@ def generate_pdf(judged_results, system_prompt, report_text):
             story.append(Paragraph(line, body_style))
 
     # ── BUILD ─────────────────────────────────────────────────────────────────
-    def dark_page(canvas, doc):
-        canvas.saveState()
-        canvas.setFillColor(colors.HexColor("#0a0a0a"))
-        canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
-        canvas.restoreState()
-
     doc.build(story, onFirstPage=dark_page, onLaterPages=dark_page)
     return buffer.getvalue()
