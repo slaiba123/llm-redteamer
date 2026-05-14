@@ -191,7 +191,6 @@ Any custom or fine-tuned model ID can be typed directly into the Model ID field.
 ### Prerequisites
 - Python 3.10+
 - API key from any supported provider (Groq is free)
-- LangSmith API key (free, optional — for tracing)
 
 ### Installation
 
@@ -208,37 +207,35 @@ source venv/bin/activate   # Mac/Linux
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Set up environment variables (optional)
-cp .env.example .env
-# Add your API keys to .env
-
-# 5. Run
+# 4. Run
 streamlit run app.py
 ```
 
-> No `.env` file needed — paste your API key directly in the sidebar when the app opens.
+App opens at `http://localhost:8501`
 
-### Environment Variables (optional)
+### API Keys (Optional)
 
+Create `.env` file to avoid re-entering keys:
 ```env
-GROQ_API_KEY=your_groq_api_key
-LANGSMITH_API_KEY=your_langsmith_api_key
-LANGSMITH_TRACING=true
-LANGSMITH_PROJECT=llm-redteamer
+GROQ_API_KEY=your_groq_key
+OPENAI_API_KEY=your_openai_key
+GOOGLE_API_KEY=your_gemini_key
 ```
+
+Or paste keys directly in the sidebar UI (no `.env` needed).
 
 ---
 
 ## How to Use
 
-1. Open the app at `http://localhost:8501`
-2. Select a **provider** (Groq, OpenAI, or Gemini)
-3. Enter a **model ID** or leave blank for the default
-4. Paste your **API key** in the sidebar
-5. Choose a **preset** (TakeoffPK / CareerGPT) or paste any custom system prompt
-6. Hit **Run Evaluation**
-7. View results by category, failed attack details, and recommendations
-8. Download the full markdown report
+1. Run: `streamlit run app.py`
+2. Open http://localhost:8501
+3. Select **provider** (Groq, OpenAI, or Gemini)
+4. Enter **model ID** (or use default)
+5. Paste your **API key**
+6. Choose **preset** (TakeoffPK / CareerGPT) or paste custom system prompt
+7. Click **Run Evaluation**
+8. View results and download markdown report
 
 ---
 
@@ -246,7 +243,7 @@ LANGSMITH_PROJECT=llm-redteamer
 
 ```
 llm-redteamer/
-├── app.py                  # Streamlit UI
+├── app.py                  # Streamlit UI + main entry point
 ├── graph/
 │   ├── state.py            # LangGraph shared state definition
 │   ├── graph.py            # Graph assembly and compilation
@@ -256,50 +253,133 @@ llm-redteamer/
 │       ├── executor.py     # Parallel attack execution node
 │       ├── judge.py        # LLM-as-judge scoring node
 │       └── reporter.py     # Report writing node
-├── reports/
-│   ├── careergpt_run1.md   # CareerGPT evaluation — run 1
-│   ├── careergpt_run2.md   # CareerGPT evaluation — run 2
-│   └── takeoffpk_run1.md   # TakeoffPK evaluation — run 1
+├── utils/
+│   └── pdf_generator.py    # PDF report generation
+├── reports/                # Evaluation results
 ├── .env                    # API keys (not committed)
-├── .env.example            # Template for environment variables
-├── requirements.txt
+├── requirements.txt        # Dependencies
 └── README.md
-```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Agent Orchestration | LangGraph |
-| LLM Providers | Groq, OpenAI, Gemini (via LangChain) |
-| Parallelism | Python ThreadPoolExecutor |
-| Observability | LangSmith |
-| UI | Streamlit |
-| Environment | python-dotenv |
+| Component | Technology |
+|-----------|-----------|
+| **Orchestration** | LangGraph |
+| **LLMs** | Groq, OpenAI, Gemini (via LangChain) |
+| **Parallelization** | ThreadPoolExecutor |
+| **UI** | Streamlit |
+| **Reporting** | ReportLab (PDF) |
+| **Observability** | LangSmith (optional) |
 
 ---
 
-## Why LangGraph?
+## Deployment Options
 
-LangGraph was chosen over plain LangChain because this system requires:
-- **Typed shared state** that persists across all 4 nodes
-- **Conditional edges** (extensible for retry loops on failed evaluations)
-- **Native support for parallel node patterns**
-- **Full observability** via LangSmith integration
+### Option 1: **Streamlit Cloud** (Easiest, Free)
 
-A simple chain wouldn't capture the stateful, multi-step nature of a real red-teaming workflow.
+1. Push code to GitHub
+2. Go to [streamlit.io/cloud](https://share.streamlit.io)
+3. Click "New app"
+4. Select your repo and `app.py`
+5. Add secrets (API keys) in Settings tab
+6. Deploy ✅
+
+**Pros:** Free, 1 click, handles updates automatically  
+**Cons:** Limited compute, sleeps after inactivity  
+**Perfect for:** Demos, sharing with classmates
+
+---
+
+### Option 2: **Hugging Face Spaces** (Free + GPU)
+
+1. Create new Space on [huggingface.co/spaces](https://huggingface.co/spaces)
+2. Choose "Streamlit" template
+3. Upload your code
+4. Add API keys in Secrets tab
+5. Deploy ✅
+
+**Pros:** Free GPU available, more compute, keeps running  
+**Cons:** Slightly less polished UI  
+**Perfect for:** Production use, longer running jobs
+
+---
+
+### Option 3: **Railway** (Paid, ~$5-10/month)
+
+1. Connect GitHub repo at [railway.app](https://railway.app)
+2. Add environment variables for API keys
+3. Deploy ✅
+
+```bash
+# Railway auto-detects Streamlit
+streamlit run app.py
+```
+
+**Pros:** Professional, fast, good support  
+**Cons:** Paid  
+**Perfect for:** Production-grade deployment
+
+---
+
+### Option 4: **Local + ngrok** (For Demo)
+
+Make your local Streamlit public temporarily:
+
+```bash
+# Terminal 1: Run Streamlit
+streamlit run app.py
+
+# Terminal 2: Expose with ngrok
+pip install ngrok
+ngrok http 8501
+```
+
+Share the ngrok URL with anyone.
+
+---
+
+## Recommended: Deploy to Streamlit Cloud
+
+1. **Create GitHub repo** (if not already):
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/YOUR_USERNAME/llm-redteamer.git
+git push -u origin main
+```
+
+2. **Go to** [streamlit.io/cloud](https://share.streamlit.io)
+
+3. **Connect with GitHub** and sign in
+
+4. **Click "New app"**
+
+5. **Select:**
+   - Repository: `llm-redteamer`
+   - Branch: `main`
+   - File path: `app.py`
+
+6. **Advanced settings → Secrets:**
+   ```
+   GROQ_API_KEY = "your_key"
+   OPENAI_API_KEY = "your_key"
+   GOOGLE_API_KEY = "your_key"
+   ```
+
+7. **Deploy** ✅
 
 ---
 
 ## Future Extensions
 
-- [ ] Retry loop: if avg score < 5, automatically generate harder attacks
-- [ ] Human-in-the-loop checkpoint before executing attacks
-- [ ] LlamaGuard integration for dual-layer safety classification
+- [ ] Retry loop for low-scoring evaluations
+- [ ] Human-in-the-loop review before attacks
 - [ ] Anthropic Claude provider support
-- [ ] CI/CD integration — run red-team eval on every prompt change
+- [ ] White-box RAG analysis (context poisoning, retrieval hijacking)
+- [ ] CI/CD integration for automated red-teaming
 
 ---
 
@@ -309,4 +389,4 @@ MIT
 
 ---
 
-Built by [Laiba Mushtaq](https://github.com/slaiba123) • [LinkedIn](https://linkedin.com/in/your-link)
+Built by [Laiba Mushtaq](https://github.com/slaiba123)
